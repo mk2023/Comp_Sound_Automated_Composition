@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pitch set composition</title>
+    <style>
+      :root {
+        font-family: system-ui, sans-serif;
+        background: #111418;
+        color: #e8eaed;
+      }
+      body {
+        max-width: 40rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        line-height: 1.45;
+      }
+      h1 {
+        font-size: 1.25rem;
+        font-weight: 600;
+      }
+      label {
+        display: block;
+        margin-top: 1rem;
+        font-size: 0.9rem;
+        color: #bdc1c8;
+      }
+      input[type="text"] {
+        width: 100%;
+        box-sizing: border-box;
+        margin-top: 0.35rem;
+        padding: 0.5rem 0.6rem;
+        border-radius: 6px;
+        border: 1px solid #3c424c;
+        background: #1a1f26;
+        color: #e8eaed;
+      }
+      input[type="number"] {
+        width: 6rem;
+        margin-top: 0.35rem;
+        padding: 0.45rem;
+        border-radius: 6px;
+        border: 1px solid #3c424c;
+        background: #1a1f26;
+        color: #e8eaed;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: flex-end;
+      }
+      .row > div {
+        flex: 1;
+        min-width: 8rem;
+      }
+      button {
+        margin-top: 1.25rem;
+        margin-right: 0.5rem;
+        padding: 0.55rem 1rem;
+        border-radius: 6px;
+        border: none;
+        background: #3d6fee;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: #3c424c;
+        color: #e8eaed;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      #log {
+        margin-top: 1.25rem;
+        padding: 0.75rem;
+        border-radius: 6px;
+        background: #1a1f26;
+        border: 1px solid #3c424c;
+        font-family: ui-monospace, monospace;
+        font-size: 0.8rem;
+        white-space: pre-wrap;
+        max-height: 14rem;
+        overflow: auto;
+      }
+      .hint {
+        font-size: 0.85rem;
+        color: #9aa0a8;
+        margin-top: 0.35rem;
+      }
+      .err {
+        color: #f28b82;
+        margin-top: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Using Pitch Set Theory for Automated Composition</h1>
+    <p class="hint">
+      Enter an ordered pitch-class sequence (0–11), assumed already in normal form.
+      <br> 
+      <br>Possible Operations:
+      <br>
+      <strong>T<sub>n</sub></strong> (transpose by <em>n</em> semitones mod 12),
+      <br>
+      <strong>I</strong> (inversion about 0: <code>x ↦ −x mod 12</code>),
+      <br>
+      <strong>R</strong> (retrograde, which reverses order of the sequence)
+      
+      <br>
+      <br>
+      Then, the piece will go randomly go through the operations and concatenate the resulting sequences to form a musical piece.
+      <br>
+    </p>
+
+    <label for="pcs">Starting pitch-class sequence</label>
+    <input
+      id="pcs"
+      type="text"
+      value="0, 2, 4, 5"
+      autocomplete="off"
+      spellcheck="false"
+    />
+    <p class="hint">Example: <code>0, 2, 4, 5</code></p>
+
+    <div class="row">
+      <div>
+        <label for="numOps">Random operations</label>
+        <input id="numOps" type="number" min="1" max="200" value="12" />
+      </div>
+      <div>
+        <label for="baseMidi">Base MIDI note (PC 0)</label>
+        <input id="baseMidi" type="number" min="30" max="96" value="60" />
+      </div>
+      <div>
+        <label for="noteMs">Note length (ms)</label>
+        <input id="noteMs" type="number" min="40" max="800" value="200" />
+      </div>
+    </div>
+
+    <label style="margin-top: 1rem">Playback mode</label>
+    <div class="hint" style="margin-top: 0.4rem">
+      Do you want me to play only the final output (after N operations), or build a whole composition using each mid-step as well?
+    </div>
+    <label style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem">
+      <input id="modeFinal" name="playMode" type="radio" value="final" />
+      Final output only (after N operations)
+    </label>
+    <label style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem">
+      <input id="modeAll" name="playMode" type="radio" value="all" checked />
+      Whole composition (include every step's output)
+    </label>
+
+    <div>
+      <button type="button" id="btnGen">Generate</button>
+      <button type="button" id="btnPlay" class="secondary" disabled>Play</button>
+    </div>
+    <div id="err" class="err" aria-live="polite"></div>
+    <div id="log" aria-label="Operation log"></div>
+
+    <script src="pitchset.js"></script> 
+    <script>
+      let lastGenerated = null; //store both full + final for one generated run
+
+      //make helper function to select elements by id
+      const el = (id) => document.getElementById(id);
+
+      function showErr(msg) {
+        el("err").textContent = msg || "";
+      }
+
+      function readControls() {
+        const seq = parsePitchClassString(el("pcs").value); //parse input string
+        const numOps = Number(el("numOps").value);
+        if (!Number.isInteger(numOps) || numOps < 1 || numOps > 200) {
+          throw new Error("Operations must be an integer from 1 to 200");
+        }
+        const baseMidi = Number(el("baseMidi").value);
+        if (!Number.isInteger(baseMidi) || baseMidi < 30 || baseMidi > 96) {
+          throw new Error("Base MIDI must be an integer 30–96");
+        }
+        const noteMs = Number(el("noteMs").value);
+        if (!Number.isFinite(noteMs) || noteMs < 40 || noteMs > 800) {
+          throw new Error("Note length must be between 40 and 800 ms");
+        }
+        return { seq, numOps, baseMidi, noteMs };
+      }
+
+      //if we want to play the whole composition, we need to get the full pitch classes
+      //if we want to play the final output, we need to get the final pitch classes
+      function getSelectedPitchClasses() {
+        if (!lastGenerated) return [];
+        return el("modeAll").checked
+          ? lastGenerated.fullPitchClasses
+          : lastGenerated.finalPitchClasses;
+      }
+
+      //checks again what we want to play and updates log's footer
+      function refreshLogFooter() {
+        if (!lastGenerated) return;
+        const selected = getSelectedPitchClasses();
+        const modeText = el("modeAll").checked
+          ? "Whole composition"
+          : "Final output only";
+        el("log").textContent =
+          lastGenerated.log.join("\n") +
+          `\n\nMode: ${modeText}` +
+          `\n→ ${selected.length} pitch classes to play`;
+        el("btnPlay").disabled = selected.length === 0;
+      }
+
+      //what happens if we click "Generate"
+      el("btnGen").addEventListener("click", () => {
+        showErr("");
+        try {
+          const { seq, numOps } = readControls(); //read values made by user
+          lastGenerated = generateComposition(seq, numOps);
+          refreshLogFooter();
+        } catch (e) {
+          showErr(e.message || String(e));
+          el("btnPlay").disabled = true;
+        }
+      });
+
+      //when we change playback mode, we need to change what gets played
+      el("modeAll").addEventListener("change", refreshLogFooter);
+      el("modeFinal").addEventListener("change", refreshLogFooter);
+
+      //when we click "Play", we have to play the selected pitch classes from the function
+      el("btnPlay").addEventListener("click", async () => {
+        const pitchClassesToPlay = getSelectedPitchClasses(); //get either the full or final pitch classes
+        if (!pitchClassesToPlay.length) return;
+        showErr("");
+        el("btnPlay").disabled = true;
+        el("btnGen").disabled = true;
+        el("modeAll").disabled = true;
+        el("modeFinal").disabled = true;
+        try {
+          const { baseMidi, noteMs } = readControls();
+          const noteSeconds = noteMs / 1000;
+          await playPitchClasses(pitchClassesToPlay, { //call function from pitchset.js
+            baseMidi,
+            noteSeconds,
+            gapSeconds: Math.min(0.05, noteSeconds * 0.2),
+          });
+        } catch (e) {
+          showErr(e.message || String(e));
+        } finally {
+          el("modeAll").disabled = false;
+          el("modeFinal").disabled = false;
+          el("btnPlay").disabled = getSelectedPitchClasses().length === 0;
+          el("btnGen").disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

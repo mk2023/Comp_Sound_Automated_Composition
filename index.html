@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pitch Set Theory Lab Reflection</title>
+    <style>
+      :root {
+        font-family: system-ui, sans-serif;
+        background: #111418;
+        color: #e8eaed;
+      }
+      body {
+        max-width: 42rem;
+        margin: 2rem auto;
+        padding: 0 1rem 2rem;
+        line-height: 1.5;
+      }
+      h1 {
+        font-size: 1.35rem;
+        margin-bottom: 0.75rem;
+      }
+      .card {
+        background: #1a1f26;
+        border: 1px solid #3c424c;
+        border-radius: 8px;
+        padding: 1rem;
+      }
+      p {
+        margin: 0.6rem 0;
+      }
+      .cta {
+        margin-top: 1rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #3c424c;
+      }
+      a.button {
+        display: inline-block;
+        margin-top: 0.35rem;
+        padding: 0.55rem 1rem;
+        border-radius: 6px;
+        text-decoration: none;
+        background: #3d6fee;
+        color: #fff;
+        font-weight: 600;
+      }
+      code {
+        font-family: ui-monospace, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Using Pitch Set Theory for Automated Composition</h1>
+    <div class="card">
+      <p>
+        Building this project helped me concretely understand pitch-set operations. In class, I could follow
+        <code>T<sub>n</sub></code>, <code>I</code>, and <code>R</code> as more of a mathematical concept, as it was introduced in linear algebra.
+        However, physically implementing them made me understand how they work in a more musical way.
+      </p>
+      <p>
+        
+        When I first encountered this concept during the lecture, at first glance, I thought randomizing the orders would produce random notes without an audible theme. 
+        However, while creating the webpage, inevitably, I had to test the operations repeatedly to check what would happen. 
+        Through this process, I discovered that pitch-set composition revealed a hidden order. 
+        Instead of making repetitive melodies or chord progressions, it was instead reusing a same set of notes in different forms through transposing, inverting, and reordering.
+        Consequently, the resulting music/tune contained a sense of musical consistency, even without a traditional tonal framework.
+      </p>
+      <p>
+        From a Web Audio perspective, I found that implementation details were significant. 
+        I implemented playback with an AudioContext, one oscillator per note, and a gain envelope for each.
+        I had to use short exponential ramps to avoid the clicks between notes, which did not sound appealing.
+      </p>
+      <p>
+        Overall, I realized that pitch becomes a modular building block in musical composition. 
+        In visual art, it is similar to working with a color palette. 
+        Although the surface of the music may change, the underlying structure is similar. 
+        Thus, the result becomes familiar as one listens to it, yet it maintains a hint of freshness in each new phrase. 
+        <br>
+        I would not have been able to see the significance of pitch-set theory in music composition if I had only examined an array of numbers going through an arithmetic operation. 
+        Through this project, I now understand pitch-set automation less as “random notes” and more as a controlled transformation system where a cohesive musical theme emerges.
+      </p>
+      <p>
+        Through interacting with the following web page, I hope you can arrive at a similar realization.
+      </p>
+
+      <div class="cta">
+        <a class="button" href="./actual_tool.html">Open my tool!</a>
+      </div>
+    </div>
+  </body>
+</html>
