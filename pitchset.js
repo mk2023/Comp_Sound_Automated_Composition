@@ -83,7 +83,15 @@ function parsePitchClassString(str) {
 //playing the composition using Web Audio API
 //pitchClasses = array of pitch-class #s that will be played
 //if whole compsotion: pitchClasses is a long concatenation of all the transformed sequences
+//returns { promise, stop } so UI can cancel overlapping playback
 function playPitchClasses(pitchClasses, input_val = {}) {
+  if (!pitchClasses.length) {
+    return {
+      promise: Promise.resolve(),
+      stop: () => {},
+    };
+  }
+
   const noteSeconds = input_val.noteSeconds ?? 0.22;
   const gapSeconds = input_val.gapSeconds ?? 0.04;
   const baseMidi = input_val.baseMidi ?? 60;
@@ -118,12 +126,24 @@ function playPitchClasses(pitchClasses, input_val = {}) {
   }
 
   const total = t - t0 + 0.1;
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      ctx.close().catch(() => {});
-      resolve();
-    }, total * 1000);
+  let timeoutId = null;
+  let settled = false;
+  let resolveDone = () => {};
+
+  const finish = () => {
+    if (settled) return;
+    settled = true;
+    if (timeoutId !== null) clearTimeout(timeoutId);
+    ctx.close().catch(() => {});
+    resolveDone();
+  };
+
+  const promise = new Promise((resolve) => {
+    resolveDone = resolve;
+    timeoutId = setTimeout(finish, total * 1000);
   });
+
+  return { promise, stop: finish };
 }
 
 if (typeof module !== "undefined" && module.exports) {

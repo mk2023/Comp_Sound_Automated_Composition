@@ -157,6 +157,7 @@
     <div>
       <button type="button" id="btnGen">Generate</button>
       <button type="button" id="btnPlay" class="secondary" disabled>Play</button>
+      <button type="button" id="btnStop" class="secondary" disabled>Stop</button>
     </div>
     <div id="err" class="err" aria-live="polite"></div>
     <div id="log" aria-label="Operation log"></div>
@@ -164,6 +165,7 @@
     <script src="pitchset.js"></script> 
     <script>
       let lastGenerated = null; //store both full + final for one generated run
+      let activePlayback = null; // { stop } from playPitchClasses while audio runs
 
       //make helper function to select elements by id
       const el = (id) => document.getElementById(id);
@@ -233,27 +235,44 @@
       el("btnPlay").addEventListener("click", async () => {
         const pitchClassesToPlay = getSelectedPitchClasses(); //get either the full or final pitch classes
         if (!pitchClassesToPlay.length) return;
+        if (activePlayback) {
+          activePlayback.stop();
+          activePlayback = null;
+        }
         showErr("");
         el("btnPlay").disabled = true;
         el("btnGen").disabled = true;
         el("modeAll").disabled = true;
         el("modeFinal").disabled = true;
+        el("btnStop").disabled = false;
         try {
           const { baseMidi, noteMs } = readControls();
           const noteSeconds = noteMs / 1000;
-          await playPitchClasses(pitchClassesToPlay, { //call function from pitchset.js
+          const playback = playPitchClasses(pitchClassesToPlay, {
             baseMidi,
             noteSeconds,
             gapSeconds: Math.min(0.05, noteSeconds * 0.2),
           });
+          activePlayback = playback;
+          await playback.promise;
         } catch (e) {
           showErr(e.message || String(e));
         } finally {
+          activePlayback = null;
           el("modeAll").disabled = false;
           el("modeFinal").disabled = false;
+          el("btnStop").disabled = true;
           el("btnPlay").disabled = getSelectedPitchClasses().length === 0;
           el("btnGen").disabled = false;
         }
+      });
+
+      el("btnStop").addEventListener("click", () => {
+        if (activePlayback) {
+          activePlayback.stop();
+          activePlayback = null;
+        }
+        el("btnStop").disabled = true;
       });
     </script>
   </body>
